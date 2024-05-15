@@ -1,0 +1,5 @@
+// SPDX-FileCopyrightText: 2024 Alexey Andreyev <aa13q@ya.ru>
+//
+// SPDX-License-Identifier: BSD-3-Clause
+
+#define TARGET_URI "@TARGET_URI@"
