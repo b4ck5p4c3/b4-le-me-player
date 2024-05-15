@@ -8,6 +8,9 @@
 #include <QtMqtt/QMqttClient>
 #include <QtMqtt/QMqttSubscription>
 #include <QtQml/QtQml>
+#ifndef QT_NO_SSL
+#include <QSslConfiguration>
+#endif
 
 class DeclarativeMqttClient;
 
@@ -40,13 +43,16 @@ class DeclarativeMqttClient : public QObject
     Q_OBJECT
     Q_PROPERTY(QString hostname READ hostname WRITE setHostname NOTIFY hostnameChanged)
     Q_PROPERTY(int port READ port WRITE setPort NOTIFY portChanged)
+    Q_PROPERTY(QString username READ username WRITE setUsername NOTIFY usernameChanged)
+    Q_PROPERTY(QString password READ password WRITE setPassword NOTIFY passwordChanged)
+    Q_PROPERTY(QString clientCertPath READ clientCertPath WRITE setClientCertPath NOTIFY clientCertPathChanged)
     Q_PROPERTY(QMqttClient::ClientState state READ state WRITE setState NOTIFY stateChanged)
     QML_NAMED_ELEMENT(MqttClient)
     QML_EXTENDED_NAMESPACE(QMqttClient)
 public:
     DeclarativeMqttClient(QObject *parent = nullptr);
 
-    Q_INVOKABLE void connectToHost();
+    Q_INVOKABLE void connectToHost(bool encrypted = true);
     Q_INVOKABLE void disconnectFromHost();
     Q_INVOKABLE DeclarativeMqttSubscription *subscribe(const QString &topic);
 
@@ -59,13 +65,30 @@ public:
     QMqttClient::ClientState state() const;
     void setState(const QMqttClient::ClientState &newState);
 
+    QString username() const;
+    void setUsername(const QString &newUserName);
+
+    QString password() const;
+    void setPassword(const QString &newPassword);
+
+    QString clientCertPath() const;
+    void setClientCertPath(const QString &newClientCertPath);
+
 signals:
     void hostnameChanged();
     void portChanged();
-
     void stateChanged();
+    void usernameChanged();
+    void passwordChanged();
+    void clientCertPathChanged();
 
 private:
     Q_DISABLE_COPY(DeclarativeMqttClient)
     QMqttClient m_client;
+    QString m_username;
+    QString m_password;
+    QString m_clientCertPath;
+#ifndef QT_NO_SSL
+    QSslConfiguration m_sslConfiguration;
+#endif
 };
