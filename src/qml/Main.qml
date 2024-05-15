@@ -57,8 +57,11 @@ Window {
             leSubscription.messageReceived.connect(parseMessage);
         }
 
-        hostname: "localhost"
-        port: 1883
+        hostname: "hostname"
+        username: "username"
+        password: "password"
+        port: 8883
+        clientCertPath: "/tmp/cafile.crt"
         Component.onCompleted: {
             connectToHost();
         }

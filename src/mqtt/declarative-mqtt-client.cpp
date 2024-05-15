@@ -25,9 +25,13 @@ DeclarativeMqttClient::DeclarativeMqttClient(QObject *parent)
     connect(&m_client, &QMqttClient::stateChanged, this, &DeclarativeMqttClient::stateChanged);
 }
 
-void DeclarativeMqttClient::connectToHost()
+void DeclarativeMqttClient::connectToHost(bool encrypted)
 {
-    m_client.connectToHost();
+    if (encrypted) {
+        m_client.connectToHost();
+    } else {
+        m_client.connectToHostEncrypted(m_sslConfiguration);
+    }
 }
 
 void DeclarativeMqttClient::disconnectFromHost()
@@ -79,4 +83,63 @@ QMqttClient::ClientState DeclarativeMqttClient::state() const
 void DeclarativeMqttClient::setState(const QMqttClient::ClientState &newState)
 {
     m_client.setState(newState);
+}
+
+QString DeclarativeMqttClient::username() const
+{
+    return m_username;
+}
+
+void DeclarativeMqttClient::setUsername(const QString &newUserName)
+{
+    if (m_username == newUserName)
+        return;
+    m_username = newUserName;
+    m_client.setUsername(m_username);
+    emit usernameChanged();
+}
+
+QString DeclarativeMqttClient::password() const
+{
+    return m_password;
+}
+
+void DeclarativeMqttClient::setPassword(const QString &newPassword)
+{
+    if (m_password == newPassword)
+        return;
+    m_password = newPassword;
+    m_client.setPassword(m_password);
+    emit passwordChanged();
+}
+
+QString DeclarativeMqttClient::clientCertPath() const
+{
+    return m_clientCertPath;
+}
+
+void DeclarativeMqttClient::setClientCertPath(const QString &newClientCertPath)
+{
+    if (m_clientCertPath == newClientCertPath)
+        return;
+    m_clientCertPath = newClientCertPath;
+#ifdef QT_NO_SSL
+    qWarning() << "Qt has not been compiled with SSL support.";
+    return;
+#endif
+    QList<QSslCertificate> certs;
+    QList<QString> fileNames;
+    fileNames.append(m_clientCertPath);
+    for (const auto &it : fileNames) {
+        auto certificates = QSslCertificate::fromPath(it);
+        if (certificates.isEmpty())
+            qWarning() << "File " << it << " does not contain any certificates";
+        certs.append(certificates);
+    }
+    if (certs.isEmpty()) {
+        qWarning() << "No certificate could be loaded.";
+        return;
+    }
+    m_sslConfiguration.setCaCertificates(certs);
+    emit clientCertPathChanged();
 }
