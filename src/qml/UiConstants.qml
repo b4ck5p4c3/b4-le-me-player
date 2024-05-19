@@ -4,7 +4,7 @@
 import QtQuick
 
 QtObject {
-    id: constants
+    id: uiConstants
 
     property color windowDefaultColor: "black"
     property real windowDefaultHeight: 320
