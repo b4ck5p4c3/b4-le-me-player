@@ -2,4 +2,9 @@
 //
 // SPDX-License-Identifier: BSD-3-Clause
 
+#pragma once
+
+#define TARGET_NAME "@TARGET_NAME@"
 #define TARGET_URI "@TARGET_URI@"
+#define TARGET_DESCRIPTION "@TARGET_DESCRIPTION@"
+#define TARGET_VERSION "@TARGET_VERSION@"

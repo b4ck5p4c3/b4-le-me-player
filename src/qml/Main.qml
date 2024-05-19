@@ -6,15 +6,15 @@ import QtQuick
 
 Window {
     width: height
-    height: constants.windowDefaultHeight
+    height: uiConstants.windowDefaultHeight
     visible: true
-    title: qsTr("b4ck5p4c3 media player")
-    color: constants.windowDefaultColor
+    title: applicationDescription
+    color: uiConstants.windowDefaultColor
 
     MqttClient {
         id: client
 
-        property string leTopic: "bus/devices/le-me"
+        property string leTopic: mqttTopicPrefix
         property string musicPath: "/music"
         property string musicTopic: leTopic + musicPath
         property string voicePath: "/voice"
@@ -57,13 +57,13 @@ Window {
             leSubscription.messageReceived.connect(parseMessage);
         }
 
-        hostname: "hostname"
-        username: "username"
-        password: "password"
-        port: 8883
-        clientCertPath: "/tmp/cafile.crt"
+        hostname: mqttHostname
+        username: mqttUsername
+        password: mqttPassword
+        port: mqttPort
+        clientCertPath: mqttCaFile
         Component.onCompleted: {
-            connectToHost();
+            connectToHost(!mqttUnencrypted);
         }
         onStateChanged: {
             if (state === MqttClient.Connected)
@@ -93,8 +93,8 @@ Window {
         noVideo: true
     }
 
-    Constants {
-        id: constants
+    UiConstants {
+        id: uiConstants
     }
 
 }
