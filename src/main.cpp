@@ -9,6 +9,8 @@
 
 #include "build-constants.h"
 
+#include "playeradaptor.h"
+
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
@@ -82,6 +84,11 @@ int main(int argc, char *argv[])
                                              QCoreApplication::translate("main", "MQTT client initiates an unencrypted connection"));
     parser.addOption(mqttUnencryptedOption);
 
+    QCommandLineOption mprisSystemDBusOption(QStringList() << "S"
+                                                           << "mpris-system-dbus",
+                                             QCoreApplication::translate("main", "Use system not session bus for MPRIS"));
+    parser.addOption(mprisSystemDBusOption);
+
     parser.process(app);
 
     bool mqttUnencrypted = parser.isSet(mqttUnencryptedOption);
@@ -110,6 +117,15 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty(QStringLiteral("mqttCaFile"), QVariant::fromValue(mqttCaFile));
     engine.rootContext()->setContextProperty(QStringLiteral("mqttTopicPrefix"), QVariant::fromValue(mqttTopicPrefix));
     engine.rootContext()->setContextProperty(QStringLiteral("mqttUnencrypted"), QVariant::fromValue(mqttUnencrypted));
+
+    auto declarativeMprisAdaptor = new DeclarativeMprisAdaptor(&app);
+    new PlayerAdaptor(declarativeMprisAdaptor);
+    bool mprisSystemDBus = parser.isSet(mprisSystemDBusOption);
+    QDBusConnection dbus = mprisSystemDBus ? QDBusConnection::systemBus() : QDBusConnection::sessionBus();
+    dbus.registerObject(QString("/org/mpris/MediaPlayer2"), declarativeMprisAdaptor);
+    QString serviceName = QString("org.mpris.MediaPlayer2.Player.%1-%2").arg(applicationName).arg(QString::number(QCoreApplication::applicationPid()));
+    dbus.registerService(serviceName);
+    engine.rootContext()->setContextProperty(QStringLiteral("mprisAdaptor"), declarativeMprisAdaptor);
 
     QObject::connect(
         &engine,
