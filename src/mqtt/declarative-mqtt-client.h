@@ -28,7 +28,7 @@ Q_SIGNALS:
     void topicChanged(QString);
     void messageReceived(const QString &msg, const QString &topic);
 
-public slots:
+public Q_SLOTS:
     void handleMessage(const QMqttMessage &qmsg);
 
 private:
@@ -74,7 +74,7 @@ public:
     QString clientCertPath() const;
     void setClientCertPath(const QString &newClientCertPath);
 
-signals:
+Q_SIGNALS:
     void hostnameChanged();
     void portChanged();
     void stateChanged();
