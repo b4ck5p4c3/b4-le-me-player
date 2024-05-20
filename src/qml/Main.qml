@@ -79,6 +79,14 @@ Window {
         noVideo: true
     }
 
+    Connections {
+        target: mprisAdaptor
+
+        function onPlayPauseRequested() {
+            musicMpvItem.playPause()
+        }
+    }
+
     MpvItem {
         id: voiceMpvItem
 
