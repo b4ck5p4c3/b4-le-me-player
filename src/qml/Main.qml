@@ -80,11 +80,47 @@ Window {
     }
 
     Connections {
-        target: mprisAdaptor
+        property MpvItem mpvItem: musicMpvItem
+
+        function onNextRequested() {
+            console.log("TODO: onNextRequested");
+        }
+
+        function onOpenUriRequested(uri) {
+            mpvItem.loadUrl(uri);
+        }
+
+        function onPauseRequested() {
+            mpvItem.pause = true;
+        }
+
+        function onPlayRequested() {
+            mpvItem.pause = false;
+        }
 
         function onPlayPauseRequested() {
-            musicMpvItem.playPause()
+            mpvItem.playPause();
         }
+
+        function onPreviousRequested() {
+            console.log("TODO: previousRequested");
+        }
+
+        function onSeekRequested(offset) {
+            mpvItem.position = mpvItem.position - offset;
+        }
+
+        function onSetPositionRequested(trackId, position) {
+            console.log("TODO: onSetPositionRequested: trackId");
+            mpvItem.position = position;
+        }
+
+        function onStopRequested() {
+            mpvItem.pause = true;
+            mpvItem.position = 0;
+        }
+
+        target: mprisAdaptor
     }
 
     MpvItem {
