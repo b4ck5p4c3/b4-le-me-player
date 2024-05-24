@@ -28,9 +28,9 @@ DeclarativeMqttClient::DeclarativeMqttClient(QObject *parent)
 void DeclarativeMqttClient::connectToHost(bool encrypted)
 {
     if (encrypted) {
-        m_client.connectToHost();
-    } else {
         m_client.connectToHostEncrypted(m_sslConfiguration);
+    } else {
+        m_client.connectToHost();
     }
 }
 
