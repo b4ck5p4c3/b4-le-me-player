@@ -9,6 +9,7 @@
 
 #include "build-constants.h"
 
+#include "declarative-mpris-interface.h"
 #include "playeradaptor.h"
 
 int main(int argc, char *argv[])
@@ -89,6 +90,11 @@ int main(int argc, char *argv[])
                                              QCoreApplication::translate("main", "Use system not session bus for MPRIS"));
     parser.addOption(mprisSystemDBusOption);
 
+    QCommandLineOption mprisNotPauseOtherPlayersOption(QStringList() << "N"
+                                                                     << "mpris-not-pause-other-players",
+                                                       QCoreApplication::translate("main", "Do not pause other all other players when new one is playing"));
+    parser.addOption(mprisNotPauseOtherPlayersOption);
+
     parser.process(app);
 
     bool mqttUnencrypted = parser.isSet(mqttUnencryptedOption);
@@ -126,6 +132,13 @@ int main(int argc, char *argv[])
     QString serviceName = QString("org.mpris.MediaPlayer2.Player.%1-%2").arg(applicationName).arg(QString::number(QCoreApplication::applicationPid()));
     dbus.registerService(serviceName);
     engine.rootContext()->setContextProperty(QStringLiteral("mprisAdaptor"), declarativeMprisAdaptor);
+
+    bool mprisNotPauseOtherPlayers = parser.isSet(mprisNotPauseOtherPlayersOption);
+
+    if (!mprisNotPauseOtherPlayers) {
+        auto declarativeMprisInterface = new DeclarativeMprisInterface(&app);
+        engine.rootContext()->setContextProperty(QStringLiteral("mprisInterface"), declarativeMprisInterface);
+    }
 
     QObject::connect(
         &engine,
