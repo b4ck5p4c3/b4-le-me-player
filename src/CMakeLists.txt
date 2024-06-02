@@ -26,6 +26,8 @@ qt_add_executable(${TARGET_NAME}
 # mpris
     mpris/declarative-mpris-adaptor.h
     mpris/declarative-mpris-adaptor.cpp
+    mpris/declarative-mpris-interface.h
+    mpris/declarative-mpris-interface.cpp
 )
 
 include_directories("mqtt")
@@ -49,6 +51,9 @@ qt_add_qml_module(${TARGET_NAME}
 
 # mpris
 qt_add_dbus_interface(mpris_iface_srcs "mpris/org.mpris.MediaPlayer2.Player.xml" mprisplayerinterface)
+qt_add_dbus_interface(mpris_iface_srcs "mpris/org.freedesktop.DBus.Properties.xml" dbuspropertiesinterface)
+set_source_files_properties("mpris/org.mpris.MediaPlayer2.xml" PROPERTIES NO_NAMESPACE true) # Fixes "redefinition of 'MediaPlayer2' as different kind of symbol"
+qt_add_dbus_interface(mpris_iface_srcs "mpris/org.mpris.MediaPlayer2.xml" mprisinterface)
 target_sources(${TARGET_NAME} PRIVATE ${mpris_iface_srcs})
 qt_add_dbus_adaptor(mpris_adaptor_srcs "mpris/org.mpris.MediaPlayer2.Player.xml" "declarative-mpris-adaptor.h" DeclarativeMprisAdaptor)
 target_sources(${TARGET_NAME} PRIVATE ${mpris_adaptor_srcs})
