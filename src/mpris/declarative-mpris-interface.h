@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <QDBusConnection>
 #include <QDBusServiceWatcher>
 #include <QObject>
 
@@ -40,7 +41,7 @@ class DeclarativeMprisInterface : public QObject
     Q_OBJECT
 
 public:
-    explicit DeclarativeMprisInterface(QObject *parent = nullptr);
+    explicit DeclarativeMprisInterface(bool systemBus = false, QObject *parent = nullptr);
     ~DeclarativeMprisInterface() = default;
 
     void pauseAllOtherMprisPlayers(const QString &excludePlayerName);
@@ -55,4 +56,5 @@ private:
     void addPlayer(const QString &serviceName);
     void removePlayer(const QString &serviceName);
     QHash<QString, MprisPlayer> m_playerList;
+    QDBusConnection m_dbus;
 };

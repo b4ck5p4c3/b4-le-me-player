@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
     bool mprisNotPauseOtherPlayers = parser.isSet(mprisNotPauseOtherPlayersOption);
 
     if (!mprisNotPauseOtherPlayers) {
-        auto declarativeMprisInterface = new DeclarativeMprisInterface(&app);
+        auto declarativeMprisInterface = new DeclarativeMprisInterface(mprisSystemDBus, &app);
         engine.rootContext()->setContextProperty(QStringLiteral("mprisInterface"), declarativeMprisInterface);
     }
 
