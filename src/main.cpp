@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 
     QCommandLineOption mprisNotPauseOtherPlayersOption(QStringList() << "N"
                                                                      << "mpris-not-pause-other-players",
-                                                       QCoreApplication::translate("main", "Do not pause other all other players when new one is playing"));
+                                                       QCoreApplication::translate("main", "Do not pause all other players when new one is playing"));
     parser.addOption(mprisNotPauseOtherPlayersOption);
 
     parser.process(app);
