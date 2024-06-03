@@ -24,16 +24,17 @@ MprisPlayer::MprisPlayer(const QString &serviceName, const QString &dbusObjectPa
     m_mediaPlayer2PlayerInterface->setTimeout(300); // default D-Bus timeout is 25 seconds
 }
 
-DeclarativeMprisInterface::DeclarativeMprisInterface(QObject *parent)
+DeclarativeMprisInterface::DeclarativeMprisInterface(bool systemBus, QObject *parent)
+    : m_dbus(systemBus ? QDBusConnection::systemBus() : QDBusConnection::sessionBus())
 {
-    m_serviceWatcher = new QDBusServiceWatcher(mprisMediaPlayer2Interace + QLatin1String("*"), QDBusConnection::sessionBus());
+    m_serviceWatcher = new QDBusServiceWatcher(mprisMediaPlayer2Interace + QLatin1String("*"), m_dbus);
 
     connect(m_serviceWatcher, &QDBusServiceWatcher::serviceRegistered, this, &DeclarativeMprisInterface::dbusServiceRegistered);
     // TODO: since QDBusConnectionInterface::serviceOwnerChanged is deprecated, query org.freedesktop.DBus directly
     connect(m_serviceWatcher, &QDBusServiceWatcher::serviceOwnerChanged, this, &DeclarativeMprisInterface::dbusServiceOwnerChanged);
 
     // Init existing interfaces
-    const QStringList services = QDBusConnection::sessionBus().interface()->registeredServiceNames().value();
+    const QStringList services = m_dbus.interface()->registeredServiceNames().value();
     for (const QString &service : services) {
         if (service.startsWith(mprisMediaPlayer2Interace)) {
             // The owners content doesn't matter, it just needs to be empty/non-empty to be parsed as new one
@@ -96,7 +97,7 @@ void DeclarativeMprisInterface::propertiesChanged(const QString &propertyInterfa
 
 void DeclarativeMprisInterface::addPlayer(const QString &serviceName)
 {
-    OrgMprisMediaPlayer2Interface iface(serviceName, mprisMediaPlayerObjectPath, QDBusConnection::sessionBus());
+    OrgMprisMediaPlayer2Interface iface(serviceName, mprisMediaPlayerObjectPath, m_dbus);
     QString identity = iface.identity();
 
     if (identity.isEmpty()) {
@@ -110,7 +111,7 @@ void DeclarativeMprisInterface::addPlayer(const QString &serviceName)
 
     qDebug() << Q_FUNC_INFO << uniqueName << serviceName;
 
-    MprisPlayer player(serviceName, mprisMediaPlayerObjectPath, QDBusConnection::sessionBus());
+    MprisPlayer player(serviceName, mprisMediaPlayerObjectPath, m_dbus);
 
     m_playerList.insert(uniqueName, player);
 
