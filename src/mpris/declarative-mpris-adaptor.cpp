@@ -2,10 +2,22 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
 #include "declarative-mpris-adaptor.h"
+#include <QDBusMessage>
 #include <QDebug>
+#include <QMetaClassInfo>
 
-DeclarativeMprisAdaptor::DeclarativeMprisAdaptor(QObject *parent)
+const auto mprisMediaPlayerObjectPath = QLatin1String("/org/mpris/MediaPlayer2");
+const auto dBusPropertiesInterface = QLatin1String("org.freedesktop.DBus.Properties");
+const auto dBusPropertiesChangedSignal = QLatin1String("PropertiesChanged");
+
+const auto mprisMediaPlayerPlaybackStatus = QLatin1String("PlaybackStatus");
+
+DeclarativeMprisAdaptor::DeclarativeMprisAdaptor(bool systemBus, QObject *parent)
+    : m_dbus(systemBus ? QDBusConnection::systemBus() : QDBusConnection::sessionBus())
 {
+    connect(this, &DeclarativeMprisAdaptor::playbackStatusChanged, this, [this]() {
+        signalPropertyChange(mprisMediaPlayerPlaybackStatus, m_PlaybackStatus);
+    });
 }
 
 bool DeclarativeMprisAdaptor::canControl() const
@@ -69,6 +81,15 @@ double DeclarativeMprisAdaptor::minimumRate() const
 QString DeclarativeMprisAdaptor::playbackStatus() const
 {
     return m_PlaybackStatus;
+}
+
+void DeclarativeMprisAdaptor::setPlaybackStatus(const QString &playbackStatus)
+{
+    qDebug() << Q_FUNC_INFO << playbackStatus;
+    if (m_PlaybackStatus != playbackStatus) {
+        m_PlaybackStatus = playbackStatus;
+        Q_EMIT playbackStatusChanged();
+    }
 }
 
 qlonglong DeclarativeMprisAdaptor::position() const
@@ -158,4 +179,19 @@ void DeclarativeMprisAdaptor::SetPosition(const QDBusObjectPath &TrackId, qlongl
 void DeclarativeMprisAdaptor::Stop()
 {
     Q_EMIT stopRequested();
+}
+
+void DeclarativeMprisAdaptor::signalPropertyChange(const QString &property, const QVariant &value)
+{
+    qDebug() << Q_FUNC_INFO << property << value;
+    QVariantMap properties;
+    properties[property] = value;
+    const int ifaceIndex = metaObject()->indexOfClassInfo("D-Bus Interface");
+    QDBusMessage msg = QDBusMessage::createSignal(mprisMediaPlayerObjectPath, dBusPropertiesInterface, dBusPropertiesChangedSignal);
+
+    msg << QLatin1String(metaObject()->classInfo(ifaceIndex).value());
+    msg << properties;
+    msg << QStringList();
+
+    m_dbus.send(msg);
 }

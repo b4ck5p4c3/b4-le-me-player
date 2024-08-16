@@ -5,6 +5,7 @@
 
 #include <QObject>
 
+#include <QDBusConnection>
 #include <QDBusObjectPath>
 
 class DeclarativeMprisAdaptor : public QObject
@@ -12,7 +13,7 @@ class DeclarativeMprisAdaptor : public QObject
     Q_OBJECT
 
 public:
-    explicit DeclarativeMprisAdaptor(QObject *parent = nullptr);
+    explicit DeclarativeMprisAdaptor(bool systemBus = false, QObject *parent = nullptr);
     ~DeclarativeMprisAdaptor() = default;
 
     Q_PROPERTY(bool CanControl READ canControl NOTIFY canControlChanged)
@@ -46,8 +47,9 @@ public:
     Q_PROPERTY(double MinimumRate READ minimumRate NOTIFY minimumRateChanged)
     double minimumRate() const;
 
-    Q_PROPERTY(QString PlaybackStatus READ playbackStatus NOTIFY playbackStatusChanged)
+    Q_PROPERTY(QString PlaybackStatus READ playbackStatus WRITE setPlaybackStatus NOTIFY playbackStatusChanged)
     QString playbackStatus() const;
+    void setPlaybackStatus(const QString &playbackStatus);
 
     Q_PROPERTY(qlonglong Position READ position NOTIFY positionChanged)
     qlonglong position() const;
@@ -105,6 +107,8 @@ Q_SIGNALS:
     void stopRequested();
 
 private:
+    void signalPropertyChange(const QString &property, const QVariant &value);
+
     bool m_CanControl;
     bool m_CanGoNext;
     bool m_CanGoPrevious;
@@ -120,4 +124,6 @@ private:
     double m_Rate;
     bool m_Shuffle;
     double m_Volume;
+
+    QDBusConnection m_dbus;
 };
