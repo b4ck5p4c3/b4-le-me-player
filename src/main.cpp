@@ -124,9 +124,11 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty(QStringLiteral("mqttTopicPrefix"), QVariant::fromValue(mqttTopicPrefix));
     engine.rootContext()->setContextProperty(QStringLiteral("mqttUnencrypted"), QVariant::fromValue(mqttUnencrypted));
 
-    auto declarativeMprisAdaptor = new DeclarativeMprisAdaptor(&app);
-    new PlayerAdaptor(declarativeMprisAdaptor);
     bool mprisSystemDBus = parser.isSet(mprisSystemDBusOption);
+
+    auto declarativeMprisAdaptor = new DeclarativeMprisAdaptor(mprisSystemDBus, &app);
+    new PlayerAdaptor(declarativeMprisAdaptor);
+
     QDBusConnection dbus = mprisSystemDBus ? QDBusConnection::systemBus() : QDBusConnection::sessionBus();
     dbus.registerObject(QString("/org/mpris/MediaPlayer2"), declarativeMprisAdaptor);
     QString serviceName = QString("org.mpris.MediaPlayer2.Player.%1-%2").arg(applicationName).arg(QString::number(QCoreApplication::applicationPid()));

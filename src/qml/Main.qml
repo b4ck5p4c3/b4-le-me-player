@@ -5,6 +5,10 @@ import LeMePlayer
 import QtQuick
 
 Window {
+    function updateMprisMusicPlaybackStatus() {
+        mprisAdaptor.PlaybackStatus = musicMpvItem.pause ? "Paused" : "Playing";
+    }
+
     width: height
     height: uiConstants.windowDefaultHeight
     visible: true
@@ -40,6 +44,7 @@ Window {
             switch (command) {
             case "playPause":
                 mpvItem.playPause();
+                updateMprisMusicPlaybackStatus();
                 break;
             case "mute":
                 mpvItem.mute = !mpvItem.mute;
@@ -92,14 +97,17 @@ Window {
 
         function onPauseRequested() {
             mpvItem.pause = true;
+            updateMprisMusicPlaybackStatus();
         }
 
         function onPlayRequested() {
             mpvItem.pause = false;
+            updateMprisMusicPlaybackStatus();
         }
 
         function onPlayPauseRequested() {
             mpvItem.playPause();
+            updateMprisMusicPlaybackStatus();
         }
 
         function onPreviousRequested() {
