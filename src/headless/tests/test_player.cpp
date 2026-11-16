@@ -82,6 +82,11 @@ private Q_SLOTS:
                     if (!request->contains("\r\n\r\n"))
                         return;
                     socket->disconnect(socket, &QTcpSocket::readyRead, nullptr, nullptr);
+                    if (request->startsWith("GET /missing")) {
+                        socket->write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                        socket->disconnectFromHost();
+                        return;
+                    }
                     socket->write("HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\nContent-Length: " + QByteArray::number(wav.size())
                                   + "\r\nConnection: close\r\n\r\n" + wav);
                     socket->disconnectFromHost();
@@ -98,6 +103,16 @@ private Q_SLOTS:
         QTRY_VERIFY(player.state().value("pause").toBool());
         QVERIFY(player.execute({{"op", "stop"}}).isEmpty());
         QTRY_COMPARE(player.state().value("status").toString(), QString("stopped"));
+        const auto missing = QString("http://127.0.0.1:%1/missing").arg(server.serverPort());
+        QVERIFY(player.execute({{"op", "play"}, {"url", missing}}).isEmpty());
+        QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("error"), 5000);
+        QVERIFY(!player.state().value("error").toString().isEmpty());
+        QVERIFY(player.execute({{"op", "pause"}, {"value", false}}).isEmpty());
+        QTRY_VERIFY(!player.state().value("pause").toBool());
+        QVERIFY(player.execute({{"op", "play"}, {"url", url}}).isEmpty());
+        QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("playing"), 5000);
+        QVERIFY(player.state().value("error").toString().isEmpty());
+        QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("finished"), 8000);
     }
 
     void qmlWithoutQuick()
