@@ -26,5 +26,8 @@ private:
     bool m_initialized = false;
     quint64 m_nextRequest = 0;
     QHash<quint64, QString> m_requests;
+    QString m_pendingPlayback;
+    quint64 m_pendingLoad = 0;
+    qint64 m_entryId = -1;
     QJsonObject m_state{{"status", "idle"}};
 };

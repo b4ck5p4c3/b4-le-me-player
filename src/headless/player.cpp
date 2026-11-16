@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "player.h"
 #include "volume.h"
+#include <QRegularExpression>
 #include <QUrl>
+#include <QUuid>
 #include <cmath>
 
 Player::Player(QObject *parent)
@@ -70,11 +72,20 @@ void Player::drainEvents()
             if (it != m_requests.end()) {
                 const auto id = it.value();
                 m_requests.erase(it);
+                if (event->reply_userdata == m_pendingLoad && event->error < 0) {
+                    m_pendingPlayback.clear();
+                    m_pendingLoad = 0;
+                }
                 Q_EMIT commandFinished(id, event->error < 0 ? QString::fromUtf8(mpv_error_string(event->error)) : QString());
             }
             continue;
         }
         if (event->event_id == MPV_EVENT_START_FILE) {
+            const auto *start = static_cast<mpv_event_start_file *>(event->data);
+            m_entryId = start->playlist_entry_id;
+            m_state.insert("playbackId", m_pendingPlayback.isEmpty() ? QUuid::createUuid().toString(QUuid::Id128) : m_pendingPlayback);
+            m_pendingPlayback.clear();
+            m_pendingLoad = 0;
             m_state.remove("error");
             m_state.remove("duration");
             m_state.remove("time-pos");
@@ -85,6 +96,8 @@ void Player::drainEvents()
             m_state.insert("status", "playing");
         else if (event->event_id == MPV_EVENT_END_FILE) {
             const auto *end = static_cast<mpv_event_end_file *>(event->data);
+            if (end->playlist_entry_id != m_entryId)
+                continue;
             const auto status = end->reason == MPV_END_FILE_REASON_ERROR ? "error" : (end->reason == MPV_END_FILE_REASON_EOF ? "finished" : "stopped");
             m_state.insert("status", status);
             m_state.insert("error", end->error < 0 ? QString::fromUtf8(mpv_error_string(end->error)) : QString());
@@ -120,7 +133,23 @@ QString Player::execute(const QJsonObject &command)
         return "id_in_flight";
     const auto operation = command.value("op").toString();
     QStringList arguments;
+    QString playbackId;
+    if (command.contains("playbackId")) {
+        playbackId = command.value("playbackId").toString();
+        if (!QRegularExpression("^[A-Za-z0-9_-]{1,80}$").match(playbackId).hasMatch())
+            return "invalid_playback_id";
+    }
+    if ((operation == "stop" || operation == "pause") && !playbackId.isEmpty()) {
+        if (!m_pendingPlayback.isEmpty() || playbackId != m_state.value("playbackId").toString())
+            return "stale_playback";
+    }
     if (operation == "play") {
+        if (!m_pendingPlayback.isEmpty())
+            return "load_pending";
+        if (playbackId.isEmpty())
+            playbackId = QUuid::createUuid().toString(QUuid::Id128);
+        if (playbackId == m_state.value("playbackId").toString())
+            return "playback_id_reused";
         const QUrl url(command.value("url").toString(), QUrl::StrictMode);
         if (!url.isValid() || url.host().isEmpty() || !url.userInfo().isEmpty() || (url.scheme() != "http" && url.scheme() != "https"))
             return "invalid_url";
@@ -149,9 +178,17 @@ QString Player::execute(const QJsonObject &command)
     argv.append(nullptr);
     const quint64 sequence = ++m_nextRequest;
     m_requests.insert(sequence, requestId);
+    if (operation == "play") {
+        m_pendingPlayback = playbackId;
+        m_pendingLoad = sequence;
+    }
     const int error = mpv_command_async(m_handle, sequence, argv.data());
     if (error < 0) {
         m_requests.remove(sequence);
+        if (operation == "play") {
+            m_pendingPlayback.clear();
+            m_pendingLoad = 0;
+        }
         return QString::fromUtf8(mpv_error_string(error));
     }
     return {};

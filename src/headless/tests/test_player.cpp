@@ -99,7 +99,10 @@ private Q_SLOTS:
         const auto url = QString("http://127.0.0.1:%1/test.wav").arg(server.serverPort());
         QVERIFY(player.execute({{"op", "play"}, {"url", url}}).isEmpty());
         QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("playing"), 5000);
-        QVERIFY(player.execute({{"op", "pause"}, {"value", true}}).isEmpty());
+        const auto firstId = player.state().value("playbackId").toString();
+        QVERIFY(!firstId.isEmpty());
+        QCOMPARE(player.execute({{"op", "stop"}, {"playbackId", "wrong"}}), QString("stale_playback"));
+        QVERIFY(player.execute({{"op", "pause"}, {"playbackId", firstId}, {"value", true}}).isEmpty());
         QTRY_VERIFY(player.state().value("pause").toBool());
         QVERIFY(player.execute({{"op", "stop"}}).isEmpty());
         QTRY_COMPARE(player.state().value("status").toString(), QString("stopped"));
@@ -109,10 +112,18 @@ private Q_SLOTS:
         QVERIFY(!player.state().value("error").toString().isEmpty());
         QVERIFY(player.execute({{"op", "pause"}, {"value", false}}).isEmpty());
         QTRY_VERIFY(!player.state().value("pause").toBool());
-        QVERIFY(player.execute({{"op", "play"}, {"url", url}}).isEmpty());
+        QVERIFY(player.execute({{"op", "play"}, {"url", url}, {"playbackId", "second"}}).isEmpty());
         QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("playing"), 5000);
+        QCOMPARE(player.state().value("playbackId").toString(), QString("second"));
+        QCOMPARE(player.execute({{"op", "stop"}, {"playbackId", firstId}}), QString("stale_playback"));
+        QCOMPARE(player.execute({{"op", "play"}, {"url", url}, {"playbackId", "second"}}), QString("playback_id_reused"));
         QVERIFY(player.state().value("error").toString().isEmpty());
+        QVERIFY(player.execute({{"op", "play"}, {"url", url}, {"playbackId", "replacement"}}).isEmpty());
+        QCOMPARE(player.execute({{"op", "stop"}, {"playbackId", "second"}}), QString("stale_playback"));
+        QTRY_COMPARE_WITH_TIMEOUT(player.state().value("playbackId").toString(), QString("replacement"), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("playing"), 5000);
         QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("finished"), 8000);
+        QCOMPARE(player.state().value("playbackId").toString(), QString("replacement"));
     }
 
     void qmlWithoutQuick()
