@@ -74,15 +74,19 @@ void Player::drainEvents()
             }
             continue;
         }
-        if (event->event_id == MPV_EVENT_START_FILE)
+        if (event->event_id == MPV_EVENT_START_FILE) {
+            m_state.remove("error");
+            m_state.remove("duration");
+            m_state.remove("time-pos");
             m_state.insert("status", "loading");
-        else if (event->event_id == MPV_EVENT_FILE_LOADED)
+        } else if (event->event_id == MPV_EVENT_FILE_LOADED)
             m_state.insert("status", "loaded");
         else if (event->event_id == MPV_EVENT_PLAYBACK_RESTART)
             m_state.insert("status", "playing");
         else if (event->event_id == MPV_EVENT_END_FILE) {
             const auto *end = static_cast<mpv_event_end_file *>(event->data);
-            m_state.insert("status", end->reason == MPV_END_FILE_REASON_ERROR ? "error" : "stopped");
+            const auto status = end->reason == MPV_END_FILE_REASON_ERROR ? "error" : (end->reason == MPV_END_FILE_REASON_EOF ? "finished" : "stopped");
+            m_state.insert("status", status);
             m_state.insert("error", end->error < 0 ? QString::fromUtf8(mpv_error_string(end->error)) : QString());
         } else if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
             const auto *property = static_cast<mpv_event_property *>(event->data);
@@ -91,7 +95,10 @@ void Player::drainEvents()
             else if (property->data && property->format == MPV_FORMAT_DOUBLE) {
                 const double value = *static_cast<double *>(property->data);
                 const auto name = QString::fromUtf8(property->name);
-                m_state.insert(name, name == "volume" ? Volume::fromMpv(value) : value);
+                if (std::isfinite(value))
+                    m_state.insert(name, name == "volume" ? Volume::fromMpv(value) : value);
+            } else if (property->format == MPV_FORMAT_NONE) {
+                m_state.remove(QString::fromUtf8(property->name));
             }
         } else {
             continue;
