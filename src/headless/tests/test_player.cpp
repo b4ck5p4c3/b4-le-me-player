@@ -82,6 +82,8 @@ private Q_SLOTS:
                     if (!request->contains("\r\n\r\n"))
                         return;
                     socket->disconnect(socket, &QTcpSocket::readyRead, nullptr, nullptr);
+                    if (request->startsWith("GET /pending"))
+                        return;
                     if (request->startsWith("GET /missing")) {
                         socket->write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
                         socket->disconnectFromHost();
@@ -124,6 +126,11 @@ private Q_SLOTS:
         QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("playing"), 5000);
         QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("finished"), 8000);
         QCOMPARE(player.state().value("playbackId").toString(), QString("replacement"));
+        const auto pending = QString("http://127.0.0.1:%1/pending").arg(server.serverPort());
+        QVERIFY(player.execute({{"op", "play"}, {"url", pending}, {"playbackId", "pending"}}).isEmpty());
+        QVERIFY(player.execute({{"op", "stop"}, {"playbackId", "pending"}}).isEmpty());
+        QTRY_COMPARE_WITH_TIMEOUT(player.state().value("playbackId").toString(), QString("pending"), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(player.state().value("status").toString(), QString("stopped"), 5000);
     }
 
     void qmlWithoutQuick()

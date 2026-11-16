@@ -76,6 +76,20 @@ void Player::drainEvents()
                     m_pendingPlayback.clear();
                     m_pendingLoad = 0;
                 }
+                if (event->reply_userdata == m_pendingStop) {
+                    m_pendingStop = 0;
+                    if (event->error >= 0 && !m_pendingPlayback.isEmpty()) {
+                        m_state.insert("playbackId", m_pendingPlayback);
+                        m_state.insert("status", "stopped");
+                        m_state.remove("error");
+                        m_state.remove("duration");
+                        m_state.remove("time-pos");
+                        m_pendingPlayback.clear();
+                        m_pendingLoad = 0;
+                        m_entryId = -1;
+                        Q_EMIT stateChanged();
+                    }
+                }
                 Q_EMIT commandFinished(id, event->error < 0 ? QString::fromUtf8(mpv_error_string(event->error)) : QString());
             }
             continue;
@@ -140,10 +154,13 @@ QString Player::execute(const QJsonObject &command)
             return "invalid_playback_id";
     }
     if ((operation == "stop" || operation == "pause") && !playbackId.isEmpty()) {
-        if (!m_pendingPlayback.isEmpty() || playbackId != m_state.value("playbackId").toString())
+        const auto target = m_pendingPlayback.isEmpty() ? m_state.value("playbackId").toString() : m_pendingPlayback;
+        if (playbackId != target)
             return "stale_playback";
     }
     if (operation == "play") {
+        if (m_pendingStop)
+            return "stop_pending";
         if (!m_pendingPlayback.isEmpty())
             return "load_pending";
         if (playbackId.isEmpty())
@@ -155,6 +172,8 @@ QString Player::execute(const QJsonObject &command)
             return "invalid_url";
         arguments = {"loadfile", url.toString(), "replace"};
     } else if (operation == "stop") {
+        if (m_pendingStop)
+            return "stop_pending";
         arguments = {"stop"};
     } else if (operation == "pause") {
         if (!command.value("value").isBool())
@@ -182,9 +201,13 @@ QString Player::execute(const QJsonObject &command)
         m_pendingPlayback = playbackId;
         m_pendingLoad = sequence;
     }
+    if (operation == "stop")
+        m_pendingStop = sequence;
     const int error = mpv_command_async(m_handle, sequence, argv.data());
     if (error < 0) {
         m_requests.remove(sequence);
+        if (operation == "stop")
+            m_pendingStop = 0;
         if (operation == "play") {
             m_pendingPlayback.clear();
             m_pendingLoad = 0;

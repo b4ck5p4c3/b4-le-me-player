@@ -28,6 +28,7 @@ private:
     QHash<quint64, QString> m_requests;
     QString m_pendingPlayback;
     quint64 m_pendingLoad = 0;
+    quint64 m_pendingStop = 0;
     qint64 m_entryId = -1;
     QJsonObject m_state{{"status", "idle"}};
 };
